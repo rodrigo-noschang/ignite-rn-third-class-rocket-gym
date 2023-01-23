@@ -1,16 +1,24 @@
 import { VStack, Image, Text, Center, Heading, ScrollView } from 'native-base';
+import { useNavigation } from '@react-navigation/native';
 
 import BgImage from '@assets/background.png';
 import LogoSVG from '@assets/logo.svg';
 import Input from '@components/Input';
 import Button from '@components/Button';
 
-const SignIn = () => {
+const SignUp = () => {
+    const navigate = useNavigation();
+
+    const handleGoBack = () => {
+        navigate.goBack();
+    }
+
     return (
         <ScrollView contentContainerStyle = {{flexGrow: 1}} showsVerticalScrollIndicator = {false}>
-            <VStack flex = {1} bgColor = 'gray.700' px = {8} pb = {16}>
+            <VStack flex = {1}px = {8} pb = {16}>
                 <Image 
                     source = {BgImage}
+                    defaultSource = {BgImage}
                     alt = 'Pessoas treinando'
                     resizeMode = 'contain'
                     position = 'absolute'
@@ -46,7 +54,11 @@ const SignIn = () => {
 
                 <Center mt = {24}>
 
-                    <Button title = 'Voltar para o login' variant = 'outline'/>
+                    <Button 
+                        title = 'Voltar para o login' 
+                        variant = 'outline'
+                        onPress = {handleGoBack}    
+                    />
                 </Center>
 
             </VStack>
@@ -54,4 +66,4 @@ const SignIn = () => {
     )
 }
 
-export default SignIn;
+export default SignUp;
