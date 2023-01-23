@@ -217,3 +217,50 @@ No nosso caso, queremos retirar o botão da rota Exercise, mas ainda queremos qu
         options = {{tabBarButton: () => null}}
     />
 ```
+
+# Usando Ícones com o Native Base:
+Podemos nos basear nas bibliotecas do vector icons normalmente, mas dessa vez usamos a tag `Icon`, importada do `native-base`, e passamos a biblioteca o vector icon na propriedade `as`.
+
+```javascript
+import { MaterialIcons } from '@expo/vector-icon';
+import { Icon } from 'native-base';
+
+// Dentro do componente:
+    <Icon
+        as = {MaterialIcon}
+        size = {7}
+        color = 'gray.200'
+        .
+        .
+        .  
+    />
+
+```
+
+Dessa forma sim, as propriedades são interpretadas da maneira correta.
+
+# Cliques com Native Base:
+Para fazer um elemento clicável/tocável, podemos usar o elemento `Pressed`, mas ele não possui nenhum indicador visual quando é tocado, pra isso, podemos adicionar nas suas estilizações, além das configurações que podemos definir em todos os outros elementos, um objeto com todas as estilizações que serão aplicadas no momento do toque. E esse objeto deve ser colocado na propriedade `_pressed`:
+
+```javascript
+    <Pressable 
+        {...rest}
+        mr = {3}
+        w = {24}
+        h = {10}
+        bg = 'gray.600'
+        rounded = 'md'
+        justifyContent = 'center'
+        alignItems = 'center'
+        overflow = 'hidden'
+        isPressed = {isActive}
+        _pressed = {{
+            borderColor: 'green.500',
+            borderWidth: 1
+        }}
+        {...rest}
+    >
+
+```
+
+Além desse atributo, podemos usar a propriedade `isPressed`, que é um booleano e, quando for verdadeiro, aplicará ao elemento as mesmas estilizações que são definidas no _pressed, ou seja, no momento do toque.
