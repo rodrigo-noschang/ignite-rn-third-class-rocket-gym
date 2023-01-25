@@ -264,3 +264,208 @@ Para fazer um elemento clicável/tocável, podemos usar o elemento `Pressed`, ma
 ```
 
 Além desse atributo, podemos usar a propriedade `isPressed`, que é um booleano e, quando for verdadeiro, aplicará ao elemento as mesmas estilizações que são definidas no _pressed, ou seja, no momento do toque.
+
+# Section List
+Cria uma lista com seções separadas dentro delas. Sua estrutura e seus dados são bastante semelhantes à FlatList, mas o dado que fornecemos pra ela no `data`, já precisa ser separado por objetos, como no exemplo. AS CHAVES DESSES OBJETOS PRECISAM SER `TITLE` E `DATA`:
+
+```javascript
+    const [exercises, setExercises] = useState([
+        {
+            title: "26.08.22",
+            data: ["Puxada frontal", "Remada unilateral"]
+        }, 
+        {
+            title: "27.08.22",
+            data: ["Puxada frontal"]
+        }
+    ]);
+```
+
+Nesse caso, cada objeto do array define uma seção diferente, e cada seção terá seu título, que aqui é a data. Passando esses dados pra SectionList fica:
+
+```javascript
+    <SectionList 
+        sections = {exercises}
+        keyExtractor = {item => item}
+        renderItem = {({ item }) => (
+            <HistoryCard />
+        )}
+        renderSectionHeader = {({ section }) => (
+            <Heading color = 'gray.200' fontSize = 'md' mt = {10} mb = {3}> 
+                {section.title}
+            </Heading>
+        )}
+    />
+```
+
+Bastante parecido mas, ao invés de só determinar o item que será renderizado, determinamos também o cabeçalho daquela seção no `renderSectionHeader`.
+
+# Feedback para o Usuário (Skeleton):
+Esse componente é importado diretamente do `native-base` e basta colocarmos ele na aplicação, e definir sua `altura e largura`. Basicamente está feito o Skeleton, mas além disso podemos também definir um `rounded` para deixar ele mais arrendodado, podemso definir as propriedades `startColor` e `endColor` para definir as cores entre as quais ele fica variando... Bastante simples e bastante eficaz para dar a impressão de loading.
+
+Ver aplicação na tela `screen/Profile.tsx`.
+
+## Impedindo quebra de layout quando o texto é muito grande:
+Podemos usar um `flexShrink = {1}` no elemento que está extrapolando seu tamanho
+
+# Dia 3
+# Buscando foto na galeria de imagens do celular
+Para isso, usaremos a biblioteca `ImagePicker`. Para usá-la precisamos obviamente fazer sua instalação:
+
+```shell
+    $ expo install expo-image-picker
+```
+
+E também fazer as configurações necessárias que são colocar o seguinte trecho de código dentro do arquivo `app.json`, em algum lugar dentro da chave `expo`:
+```javascript
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you share them with your friends."
+        }
+      ]
+    ]
+```
+
+## Utilizando Image Picker
+Basta fazer a importação dele (importando tudo com o '*'). Depois disso, basta chamar a função que abre o seletor de imagens:
+
+```javascript
+    import * as ImagePicker from 'expo-image-picker';
+
+    // Dentro do componente, na função que é disparada pelo toque em um determinado lugar:
+
+    await ImagePicker.launchImageLibraryAsync();
+
+    // Opcionalmente, também podemos passar alguns parâmetros que vão definir os arquivos buscados por essa função
+    const photoSelected = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images, // Busca apenas imagens
+        quality: 1, // Fator de compressão da imagem
+        aspect: [4, 4] // Seleciona uma image quadrada, 4x4,
+        allowsEditing: true // Permite recortar, reposicionar, etc
+    });
+```
+
+É importante armazenar essa imagem em uma variável, que carrega todas as informações dessa imagem. Ela retorna várias informações, dentre elas, a mais importante é a uri da imagem que acabamos de "criar". Podemos buscar essa uri dentro de `photoSelected.assets[0].uri` (por enquanto é isso, até que haja outra atualização).
+
+Também podemos limitar o tamanho da imagem que o usuário pode selecionar usando a biblioteca `FileSystem`. Instalaremos ela:
+
+```shell
+    $ expo install expo-file-system
+```
+
+Para pegarmos as informações do arquivo, basta importar a biblioteca e usar a função `getInfoAsync` passando a uri da imagem como parâmetro:
+
+```javascript
+    import * as FileSystem from 'expo-file-system';
+
+    const photoInfo = await FileSystem.getInfoAsync(photoSelected.assets[0].uri);
+```
+
+Isso nos retornará várias informações, incluindo o tamanho da imagem em `bytes`.
+
+## Feedback com Toast:
+Importamos o `useToast` do próprio `native-base` e usamos da seguinte forma:
+
+```javascript
+    const toast = useToast();
+
+    toast.show({
+        title: 'Essa imagem é muito grande, escolha uma de até 5MB',
+        placement: "top",
+        bgColor: 'red.500'
+    })
+```
+
+Assim, chamamos a função de toast, e ainda definimos algumas propriedades como o texto, o lugar onde será exibida e a cor de fundo.
+
+# Dia 4
+# Formulários com React Hook Form
+Instalando o react hook form: 
+```shell
+    $ npm install react-hook-form
+```
+
+Para podermos criar esse formulário, primeiro precisamos importar as partes fundamentais do `react-hook-form`, o `Controller` e o `useForm`. Cada inputs deve ser englobado pela tag `<Controller>` da seguinte forma:
+
+```javascript
+    import { useForm, Controller } from 'react-hook-form';
+
+    // Dentro do componente:
+    const { control } = useForm();
+
+    return (
+        <Controller
+            control = { control }
+            name = 'name' // Nome do input
+            render = {( field: { onChange, value } ) => (
+                <Input 
+                    placeholder = 'Nome'
+                    onChangeText = {onChange}
+                    value = {value}
+                />
+            )}
+        />
+    )
+``` 
+
+Assim, os inputs já serão controlados pelo react hook form, agora precisamos pegar esses valores de volta. Para isso, vamos também pegar a função `handleSubmit` do objeto de retorno do `useForm`, e também aproveitaremos para `tipar os campos do formulário`:
+
+```javascript
+    type FormDataProps = {
+        name: string, 
+        email: string,
+        password: string,
+        confirmPassword: string
+    }
+
+    const { control, handleSubmit } = useForm<FormDataProps>();
+
+    // No ultimo input do formulário (OPCIONAL, para que o user possa enviar direto pelo teclado):
+    <Input 
+        onSubmitEditing = {handleSubmit(submitFunction)}
+        returnKeyType = 'send'
+    />
+
+    // No botão de envio:
+    <Button 
+        onPress = {handleSubmit(submitFunction)}
+    />
+
+```
+
+## Exibindo Mensagens de Erro:
+Para exibir a mensagem de erro, podemos usar o componente `FormControl` do próprio `native-base`. Assim como o Controller, iremos englobal nosso input com esse componente, e passar para ele um atributo `isInvalid`, que será a variável que representa se o nosso input é inválido ou não.
+
+Depois disso, podemos colocar abaixo do input, uma tag `FormControl.ErrorMessage` que tem como filho a própria mensagem de erro. Veja como isso está sendo aplicado no `@component/Input.tsx`, que está sendo usado no `SingUp.tsx`.
+
+## Validando inputs com Yup e YupResolver
+
+Instalando os dois:
+```shell
+    $ npm install @hookform/resolvers yup
+```
+
+Agora criamos o objeto do esquema, assim como no react normal:
+```javascript
+    const signUpSchema = yup.object({
+        name: yup.string().required('Informe o nome'),
+        email: yup.string().required('Informe o email').email('Email inválido'),
+        password: yup.string().required('Informe a senha').min(6, 'A senha deve ter pelo menos 6 dígitos'),
+        confirmPassword: yup.string().required('Confirme a senha').oneOf([yup.ref('password'), null], 'As senhas não são iguais')
+    })
+```
+
+Depois, passamos esse esquema para o useForm:
+```javascript
+    const { control, handleSubmit, formState: { errors } } = useForm<FormDataProps>({
+        resolver: yupResolver(signUpSchema)
+    });
+```
+
+Lembrando de fazer as importações:
+```javascript
+    import * as yup from 'yup';
+    import { yupResolver } from '@hookform/resolvers/yup';
+```
