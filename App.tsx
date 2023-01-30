@@ -7,17 +7,19 @@ import { THEME } from './src/theme';
 
 import Routes from '@routes/index';
 
+import { AuthContextProvder } from '@contexts/AuthContext';
+
 export default function App() {
 	const [fontsLoaded] = useFonts({Roboto_400Regular, Roboto_700Bold});
 
 	return (
 		<NativeBaseProvider theme = {THEME}>
 			<StatusBar barStyle = {'light-content'} backgroundColor = {'transparent'} translucent/>
-			{fontsLoaded ? 
-				<Routes />
-			:
-				<Loading />
-			}
+			
+			<AuthContextProvder>
+				{ fontsLoaded ? <Routes /> : <Loading /> }
+			</AuthContextProvder>
+			
 		</NativeBaseProvider>
 	);
 }

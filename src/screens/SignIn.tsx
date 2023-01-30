@@ -1,15 +1,20 @@
-import { VStack, Image, Text, Center, Heading, ScrollView } from 'native-base';
-import { useNavigation } from '@react-navigation/native';
-import { useForm, Controller } from 'react-hook-form';
+import { useState } from 'react';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
+import { useForm, Controller } from 'react-hook-form';
+import { useNavigation } from '@react-navigation/native';
+import { VStack, Image, Text, Center, Heading, ScrollView } from 'native-base';
+import { useToast } from 'native-base';
+
+import { AppError } from '@utils/AppError';
 
 import { AuthNavigationRoutesProps } from '@routes/auth.routes'
-
 import BgImage from '@assets/background.png';
+import { useAuth } from '@hooks/useAuth';
+import Button from '@components/Button';
 import LogoSVG from '@assets/logo.svg';
 import Input from '@components/Input';
-import Button from '@components/Button';
+
 
 const singInSchema = yup.object({
     email: yup.string().required('Informe o email').email('Email inválido'),
@@ -22,14 +27,34 @@ type signInFormProps = {
 }
 
 const SignIn = () => {
+    const [isLoading, setIsLoading] = useState(false);
+
     const { control, handleSubmit, formState: { errors } } = useForm<signInFormProps>({
         resolver: yupResolver(singInSchema)
     })
 
+    const { signIn } = useAuth();
+    const toast = useToast();
+
     const navigate = useNavigation<AuthNavigationRoutesProps>()
 
-    const handleSignIn = (data: signInFormProps) => {
-        console.log(data);
+    const handleSignIn = async ({email, password}: signInFormProps) => {
+        try {
+            setIsLoading(true);
+            await signIn(email, password);
+            
+        } catch (error) {
+            const isAppError = error instanceof AppError;
+
+            const title = isAppError ? error.message : 'Não foi possível entrar. Tente novamente mais tarde.'
+            toast.show({
+                title,
+                placement: 'top', 
+                bgColor: 'red.500'
+            })
+
+            setIsLoading(false);
+        }
     }
 
     const handleNewAccount = () => {
@@ -93,6 +118,7 @@ const SignIn = () => {
                     <Button 
                         title = 'Acessar'
                         onPress = {handleSubmit(handleSignIn)}
+                        isLoading = {isLoading}
                     />
                 </Center>
 
