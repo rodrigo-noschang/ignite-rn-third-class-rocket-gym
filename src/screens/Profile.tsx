@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TouchableOpacity, Alert } from 'react-native';
+import { TouchableOpacity } from 'react-native';
 import { Center, ScrollView, VStack, Skeleton, Text, Heading, useToast } from 'native-base';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
@@ -7,6 +7,10 @@ import * as FileSystem from 'expo-file-system';
 import { useForm, Controller } from 'react-hook-form';
 import * as yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
+
+import { useAuth } from '@hooks/useAuth';
+import { api } from '@services/api';
+import { AppError } from '@utils/AppError';
 
 import UserPhoto from '@components/UserPhoto';
 import ScreenHeader from '@components/ScreenHeader';
@@ -17,6 +21,7 @@ const PHOTO_SIZE = 33;
 
 type ProfileFormProps = {
     name: string, 
+    email: string,
     currentPassword: string,
     newPassword: string,
     newPassowrdConfirm: string
@@ -24,17 +29,36 @@ type ProfileFormProps = {
 
 const profileFormSchema = yup.object({
     name: yup.string().required('Informe o novo nome'),
-    currentPassword: yup.string().required('Informe a senha atual'),
-    newPassword: yup.string().required('Informe a nova senha').min(6, 'A senha deve ter pelo menos 6 caractéres'),
-    newPassowrdConfirm: yup.string().required('Confirme a senha').oneOf([yup.ref('newPassword'), null], 'As senhas devem ser iguais')
+    newPassword: yup
+        .string()
+        .nullable()
+        .min(6, 'A senha deve ter pelo menos 6 caractéres')
+        .nullable()
+        .transform((value) => !!value ? value : null),
+    newPassowrdConfirm: yup
+        .string()
+        .nullable()
+        .transform((value) => !!value ? value : null)
+        .oneOf([yup.ref('newPassword'), null], 'As senhas devem ser iguais')
+        .when('newPassword', {
+            is: (Field: any) => Field,
+            then: yup.string().nullable().required('Informe a confirmação da senha').transform((value) => !!value ? value : null)
+        })
 })
 
 export const Profile = () => {
+    const [isUpdating, setIsUpdating] = useState(false);
     const [photoIsLoading, setPhotoIsLoading] = useState(false);
     const [userPhoto, setUserPhoto] = useState('https://github.com/rodrigo-noschang.png');
 
+    const { user, updateUserProfile } = useAuth();
+
     const { control, handleSubmit, formState: { errors } } = useForm<ProfileFormProps>({
-        resolver: yupResolver(profileFormSchema)
+        resolver: yupResolver(profileFormSchema),
+        defaultValues: {
+            name: user.name,
+            email: user.email
+        }
     })
 
     const toast = useToast();
@@ -73,8 +97,34 @@ export const Profile = () => {
         }
     }
 
-    const handleUpdateProfile = (data: ProfileFormProps) => {
-        console.log(data);
+    const handleProfileUpdate = async (data: ProfileFormProps) => {
+        try {
+            setIsUpdating(true);
+
+            const userUpdated = user;
+            userUpdated.name = data.name;
+
+            await api.put('/users', data);
+            await updateUserProfile(userUpdated);
+
+            toast.show({
+                title: 'Perfil atualizado com sucesso',
+                placement: 'top',
+                bgColor: 'green.500'
+            })
+
+        } catch (error) {
+            const isAppError = error instanceof AppError;
+            const title = isAppError ? error.message : 'Não foi possivel atualizar os dados. Tente novamente mais tarde'
+
+            toast.show({
+                title, 
+                placement: 'top',
+                bgColor: 'red.500'
+            })
+        } finally {
+            setIsUpdating(false);
+        }
     }
 
     return (
@@ -119,10 +169,17 @@ export const Profile = () => {
                         )}
                     />
 
-                    <Input 
-                        bgColor = 'gray.600'
-                        placeholder = 'E-mail'
-                        isDisabled
+                    <Controller 
+                        control = {control}
+                        name = 'email'
+                        render = {({ field: { value} }) => (
+                            <Input 
+                                bgColor = 'gray.600'
+                                placeholder = 'E-mail'
+                                value = {value}
+                                isDisabled
+                            />
+                        )}
                     />
                 </Center>
 
@@ -134,13 +191,12 @@ export const Profile = () => {
                     <Controller 
                         control = {control}
                         name = 'currentPassword'
-                        render = {({ field: {onChange, value} }) => (
+                        render = {({ field: {onChange} }) => (
                             <Input 
                                 bgColor = 'gray.600'
                                 placeholder = 'Senha antiga'
                                 secureTextEntry
                                 onChangeText = {onChange}
-                                value = {value}
                                 errorMessage = {errors.currentPassword?.message}
                             />
                         )}
@@ -149,13 +205,12 @@ export const Profile = () => {
                     <Controller 
                         control = {control}
                         name = 'newPassword'
-                        render = {({ field: {onChange, value} }) => (
+                        render = {({ field: {onChange} }) => (
                             <Input 
                                 bgColor = 'gray.600'
                                 placeholder = 'Nova senha'
                                 secureTextEntry
                                 onChangeText = {onChange}
-                                value = {value}
                                 errorMessage = {errors.newPassword?.message}
                             />
                         )}
@@ -164,13 +219,12 @@ export const Profile = () => {
                     <Controller 
                         control = {control}
                         name = 'newPassowrdConfirm'
-                        render = {({ field: {onChange, value} }) => (
+                        render = {({ field: {onChange} }) => (
                             <Input 
                                 bgColor = 'gray.600'
                                 placeholder = 'Confirme a nova senha'
                                 secureTextEntry
                                 onChangeText = {onChange}
-                                value = {value}
                                 errorMessage = {errors.newPassowrdConfirm?.message}
                             />
                         )}
@@ -179,7 +233,8 @@ export const Profile = () => {
                     <Button 
                         title = 'Atualizar'
                         mt = {4}
-                        onPress = {handleSubmit(handleUpdateProfile)}
+                        onPress = {handleSubmit(handleProfileUpdate)}
+                        isLoading = {isUpdating}
                     />
                 </VStack>
             </ScrollView>

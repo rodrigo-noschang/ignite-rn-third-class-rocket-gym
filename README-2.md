@@ -108,3 +108,47 @@ Agora, o uso do Context nos componentes fica muito mais fácil:
     // Dentro do componente
     const { user } = useAuth();
 ```
+
+# Anexando o Token ao header de todas as requisições:
+Para evitar de ter que inserir o token em todas as requisições de rotas privadas, podemos inserí-lo de maneira "global" por padrão com o seguinte comando:
+
+```js
+    api.deafults.headers.common['Authorization'] = `Bearer ${token}`;
+```
+
+Dessa forma, o token já está automaticamente anexado aos headers das requisições futuras.
+
+## Buscando imagem pela URL da API:
+No caso dessa API com a qual estamos trablhando, a imagem de thumb do exercício é composta apenas pelo nome da imagem, sem a uri toda. Pelo padrão dessa API, usamos a url base dessa API, e ao final adicionamos `/exercise/thumb/nome-da-image.png`. E podemos usar o axios para nos auxiliar nisso:
+
+```js
+import { api } from '@services/api';
+
+// Dentro do componente:
+<Image
+    ...
+    source = {{uri: `${api.defaults.baseULR/exercise/thumb/${data.thumb}}`}};
+/>
+
+No caso, `data.thumb` é onde está salvo o nome da imagem.
+
+```
+
+## Tratando dados com o Yup:
+Quando digitamos algo no input e depois apagamos, o yup coloca isso como uma string vazia, ao invés de um `undefined` ou `null`. Algo que poderia ser jogado direto para o banco. Para nos assegurar de que um valor nullable desse será mantido, ao invés de trocado, podemos adicionar essa regra dentro do schema:
+
+```js
+    newPassword:  ....nullable().transform((value) => !!value ? value : null),
+```
+
+E se quiser que um campo `passe a ser obrigatório` dependendo do valor de outro campo, podemos usar a validação com o `when`:
+
+```js
+    confirmNewPassowrd: ...
+        .when('newPassword', {
+            is: (Field: any) => Field,
+            then: yup.string().nullable().required('Informe a confirmação da senha')
+        })
+```
+
+Nesse caso, quando o campo `newPassword` tiver algo de válido dentro dele, esse mesmo input `confirmNewPassword` passa a ser required, por exemplo. 
