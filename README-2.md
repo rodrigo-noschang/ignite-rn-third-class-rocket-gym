@@ -152,3 +152,5 @@ E se quiser que um campo `passe a ser obrigatório` dependendo do valor de outro
 ```
 
 Nesse caso, quando o campo `newPassword` tiver algo de válido dentro dele, esse mesmo input `confirmNewPassword` passa a ser required, por exemplo. 
+
+# Refresh Token:

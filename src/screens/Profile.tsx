@@ -11,6 +11,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { useAuth } from '@hooks/useAuth';
 import { api } from '@services/api';
 import { AppError } from '@utils/AppError';
+import userPhotoDefault from '@assets/userPhotoDefault.png';
 
 import UserPhoto from '@components/UserPhoto';
 import ScreenHeader from '@components/ScreenHeader';
@@ -49,7 +50,7 @@ const profileFormSchema = yup.object({
 export const Profile = () => {
     const [isUpdating, setIsUpdating] = useState(false);
     const [photoIsLoading, setPhotoIsLoading] = useState(false);
-    const [userPhoto, setUserPhoto] = useState('https://github.com/rodrigo-noschang.png');
+    const [userPhoto, setUserPhoto] = useState('');
 
     const { user, updateUserProfile } = useAuth();
 
@@ -86,12 +87,46 @@ export const Profile = () => {
                     });
                 }
 
+                const fileExtension = photoSelected.assets[0].uri.split('.').pop();
+                const usableUserName = user.name.split(' ').join('-').toLowerCase();
 
-                setUserPhoto(photoSelected.assets[0].uri);
+                const photoFile = {
+                    name: `${usableUserName}.${fileExtension}`,
+                    uri: photoSelected.assets[0].uri,
+                    type: `${photoSelected.assets[0].type}/${fileExtension}`
+                } as any;
+
+                const userPhotoUploadForm = new FormData();
+                userPhotoUploadForm.append('avatar', photoFile);
+
+                const avatarUpdatedResponse = await api.patch('/users/avatar', userPhotoUploadForm, {
+                    headers: {
+                        'Content-Type': 'multipart/form-data'
+                    }
+                })
+
+                const userUpdated = user;
+                userUpdated.avatar = avatarUpdatedResponse.data.avatar;
+
+                await updateUserProfile(userUpdated);
+
+                toast.show({
+                    title: 'Foto atualizada',
+                    placement: 'top',
+                    bgColor: 'green.500'
+                })
             }
             
         } catch (error) {
-            console.log(error);
+            const isAppError = error instanceof AppError;
+            const title = isAppError ? error.message : 'Não foi possível atualizar a foto. Tente novamente mais tarde'
+
+            toast.show({
+                title, 
+                placement: 'top',
+                bgColor: 'red.500'
+            })
+
         } finally {
             setPhotoIsLoading(false);
         }
@@ -143,7 +178,11 @@ export const Profile = () => {
                     />
                     :
                     <UserPhoto 
-                        source = {{uri: userPhoto}}
+                        source = {
+                            user.avatar 
+                            ? { uri: `${api.defaults.baseURL}/avatar/${user.avatar}` } 
+                            : userPhotoDefault
+                        }
                         alt = 'Foto do usuário'
                         size = {PHOTO_SIZE}
                     />
